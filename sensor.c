@@ -1,46 +1,61 @@
-#include  <SPI.h>
-#include "nRF24L01.h"
-#include "RF24.h"
-#define NODEID 2                        // Give a node ID
+// Well Nodes //
 
-RF24 radio(9,10);
-const uint64_t pipe = 0xE8E8F0F0E5LL;   // Change the last byte for each node
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+#define NODEID 2
+
 const int trigPin = 3;
 const int echoPin = 5;
-long duration;
-int distance=5;
-int msg[2];
 
-void setup(void){
-    pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
-    pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+long duration;
+int distance;
+
+const byte thisSlaveAddress[5] = {'R','x','A','A','A'+NODEID};
+
+RF24 radio(9, 10);
+
+int dataReceived[1];
+int ackData[2] = {NODEID, 0};
+
+void setup() {
     Serial.begin(9600);
+    
     radio.begin();
-    radio.openWritingPipe(pipe);
+    radio.setDataRate( RF24_250KBPS );
+    radio.openReadingPipe(1, thisSlaveAddress);
+    
+    radio.enableAckPayload();
+    radio.writeAckPayload(1, &ackData, sizeof(ackData));
+    
+    radio.startListening();
 }
 
 
-void loop(void){
-    // Ultrasonic reading //
+void loop() {
+    
+    if ( radio.available() ) {
+        radio.read( &dataReceived, sizeof(dataReceived) );
+        if (dataReceived[0] == 1) {
+            ackData[0] = NODEID;
+            ackData[1] = getUltrasonic();
+            Serial.println(ackData[1]);
+            radio.writeAckPayload(1, &ackData, sizeof(ackData));
+        }
+    }
+}
+
+
+
+
+int getUltrasonic() {
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
     digitalWrite(trigPin, HIGH);
     delayMicroseconds(10);
     digitalWrite(trigPin, LOW);
     duration = pulseIn(echoPin, HIGH);
-    distance= duration*0.034/2;
-    
-    // construct message //
-    msg[0] = NODEID;
-    msg[1] = distance;
-    
-    // send id and distance //
-    int done = 0;
-    while (done == 0) {
-        done = radio.write(msg, sizeof(msg));
-    }
-    
-    
-    delay(1000);
-    
+    distance = duration*0.034/2;
+    return distance;
 }
