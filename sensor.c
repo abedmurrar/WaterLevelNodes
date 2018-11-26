@@ -28,22 +28,16 @@ void setup() {
     
     radio.enableAckPayload();
     radio.writeAckPayload(1, &ackData, sizeof(ackData));
+    radio.maskIRQ(1,1,0);
     
     radio.startListening();
+    attachInterrupt(0, wakeUp, FALLING);
 }
 
 
 void loop() {
     
-    if ( radio.available() ) {
-        radio.read( &dataReceived, sizeof(dataReceived) );
-        if (dataReceived[0] == 1) {
-            ackData[0] = NODEID;
-            ackData[1] = getUltrasonic();
-            Serial.println(ackData[1]);
-            radio.writeAckPayload(1, &ackData, sizeof(ackData));
-        }
-    }
+    
 }
 
 
@@ -58,4 +52,18 @@ int getUltrasonic() {
     duration = pulseIn(echoPin, HIGH);
     distance = duration*0.034/2;
     return distance;
+}
+
+
+
+void wakeUp() {
+    if ( radio.available() ) {
+        radio.read( &dataReceived, sizeof(dataReceived) );
+        if (dataReceived[0] == 1) {
+            ackData[0] = NODEID;
+            ackData[1] = getUltrasonic();
+            Serial.println(ackData[1]);
+            radio.writeAckPayload(1, &ackData, sizeof(ackData));
+        }
+    }
 }
