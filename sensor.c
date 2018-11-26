@@ -1,8 +1,11 @@
+
+
 // Well Nodes //
 
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <LowPower.h>
 
 #define NODEID 2
 
@@ -32,6 +35,7 @@ void setup() {
     
     radio.startListening();
     attachInterrupt(0, wakeUp, FALLING);
+    LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
 }
 
 
