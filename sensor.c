@@ -5,12 +5,14 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <LowPower.h>
+#include <avr/sleep.h>
+#include <avr/power.h>
 
 #define NODEID 2
 
 const int trigPin = 3;
 const int echoPin = 5;
+int WakeUpFlag;
 
 long duration;
 int distance;
@@ -23,6 +25,8 @@ int dataReceived[1];
 int ackData[2] = {NODEID, 0};
 
 void setup() {
+    power_adc_disable();
+    
     Serial.begin(9600);
     
     radio.begin();
@@ -32,16 +36,38 @@ void setup() {
     radio.enableAckPayload();
     radio.writeAckPayload(1, &ackData, sizeof(ackData));
     radio.maskIRQ(1,1,0);
+    radio.setPALevel(RF24_PA_LOW);          // Affects Range
     
     radio.startListening();
+    WakeUpFlag = 0;
     attachInterrupt(0, wakeUp, FALLING);
-    LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
 }
 
 
+
+
 void loop() {
+    if (WakeUpFlag == 1) {
+        if ( radio.available() ) {
+            radio.read( &dataReceived, sizeof(dataReceived) );
+            if (dataReceived[0] == 1) {
+                ackData[0] = NODEID;
+                ackData[1] = getUltrasonic();
+                Serial.println(ackData[1]);
+                radio.writeAckPayload(1, &ackData, sizeof(ackData));
+            }
+        }
+    }
+    WakeUpFlag = 0;
+    set_sleep_mode (SLEEP_MODE_PWR_DOWN);
+    sleep_enable();
     
+    noInterrupts ();
+    attachInterrupt (0, wakeUp, FALLING);
+    EIFR = bit (INTF0);
     
+    interrupts ();
+    sleep_cpu ();
 }
 
 
@@ -61,13 +87,7 @@ int getUltrasonic() {
 
 
 void wakeUp() {
-    if ( radio.available() ) {
-        radio.read( &dataReceived, sizeof(dataReceived) );
-        if (dataReceived[0] == 1) {
-            ackData[0] = NODEID;
-            ackData[1] = getUltrasonic();
-            Serial.println(ackData[1]);
-            radio.writeAckPayload(1, &ackData, sizeof(ackData));
-        }
-    }
+    WakeUpFlag = 1;
+    sleep_disable();
+    detachInterrupt (0);
 }
