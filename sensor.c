@@ -1,5 +1,3 @@
-
-
 // Well Nodes //
 
 #include <SPI.h>
@@ -12,10 +10,10 @@
 
 const int trigPin = 3;
 const int echoPin = 5;
-int WakeUpFlag;
-
+const int ultrasonicVcc = 6;
 long duration;
 int distance;
+int WakeUpFlag;
 
 const byte thisSlaveAddress[5] = {'R','x','A','A','A'+NODEID};
 
@@ -25,6 +23,11 @@ int dataReceived[1];
 int ackData[2] = {NODEID, 0};
 
 void setup() {
+    pinMode(trigPin,OUTPUT);
+    pinMode(echoPin,INPUT);
+    pinMode(ultrasonicVcc,OUTPUT);
+    digitalWrite(ultrasonicVcc,0);
+    
     power_adc_disable();
     
     Serial.begin(9600);
@@ -42,7 +45,6 @@ void setup() {
     WakeUpFlag = 0;
     attachInterrupt(0, wakeUp, FALLING);
 }
-
 
 
 
@@ -68,12 +70,15 @@ void loop() {
     
     interrupts ();
     sleep_cpu ();
+    
 }
 
 
 
 
 int getUltrasonic() {
+    digitalWrite(ultrasonicVcc,1);
+    delay(500);
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
     digitalWrite(trigPin, HIGH);
@@ -81,6 +86,7 @@ int getUltrasonic() {
     digitalWrite(trigPin, LOW);
     duration = pulseIn(echoPin, HIGH);
     distance = duration*0.034/2;
+    digitalWrite(ultrasonicVcc,0);
     return distance;
 }
 
