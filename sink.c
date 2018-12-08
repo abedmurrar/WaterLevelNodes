@@ -5,19 +5,22 @@
 
 #define GATEWAY_ADDR 9
 
-const byte numSlaves = 2;
+const byte numSlaves = 3;
 const byte slaveAddress[numSlaves][5] = {
-    {'R','x','A','A','B'},
-    {'R','x','A','A','C'}
+    {'R','x','A','A','A'+1},
+    {'R','x','A','A','A'+3},
+    {'R','x','A','A','A'+8}
 };
 RF24 radio(9, 10);
+
+int i = 0;
 
 int dataToSend[1];
 int ackData[2] = {-1, -1};
 
 unsigned long currentMillis;
 unsigned long prevMillis;
-unsigned long txIntervalMillis = 1000;
+unsigned long txIntervalMillis = 2000;
 
 // struct for I2C communication
 struct Reading{
@@ -34,6 +37,7 @@ void setup() {
     
     radio.enableAckPayload();
     
+    radio.setPALevel(RF24_PA_LOW);          // Affects Range
     radio.setRetries(3,5);
     radio.openWritingPipe(slaveAddress);
 }
@@ -43,36 +47,47 @@ void loop() {
     if (currentMillis - prevMillis >= txIntervalMillis) {
         
         for (byte n = 0; n < numSlaves; n++){
-            
+            i++;
             radio.openWritingPipe(slaveAddress[n]);
             bool rslt;
             dataToSend[0] = 1;
             rslt = radio.write( &dataToSend, sizeof(dataToSend) );
+            
+            
+            Reading r;
             
             if (rslt) {
                 if ( radio.isAckPayloadAvailable() ) {
                     radio.read(&ackData, sizeof(ackData));
                     
                     // Create I2C structure //
-                    Reading r;
                     r.id = float(ackData[0]);
                     r.measurement = float(ackData[1]);
                     
                     // Display on Serial Monitor for debugging //
+                    Serial.print(i);
+                    Serial.print(" -> ");
                     Serial.print(r.id);
-                    Serial.print(" ");
+                    Serial.print(": ");
                     Serial.println(r.measurement);
                     
-                    // send I2C //
-                    sendReading(r);
                 }
                 else {
-                    Serial.println("  Acknowledge but no data ");
+                    Serial.print(slaveAddress[n][4]-'A');
+                    Serial.println(": Acknowledge but no data ");
+                    r.id = float(slaveAddress[n][4]-'A');
+                    r.measurement = float(0);
                 }
             }
             else {
-                Serial.println("  Tx failed");
+                Serial.print(slaveAddress[n][4]-'A');
+                Serial.println(": Tx failed");
+                r.id = float(slaveAddress[n][4]-'A');
+                r.measurement = float(-10);
             }
+            
+            // send I2C //
+            sendReading(r);
             
             prevMillis = millis();
         }
