@@ -62,7 +62,11 @@ void loop() {
                     
                     // Create I2C structure //
                     r.id = float(ackData[0]);
-                    r.measurement = float(ackData[1]);
+                    if (ackData[1] > 500) {
+                        r.measurement = float(500);
+                    } else {
+                        r.measurement = float(ackData[1]);
+                    }
                     
                     // Display on Serial Monitor for debugging //
                     Serial.print(i);
@@ -83,7 +87,7 @@ void loop() {
                 Serial.print(slaveAddress[n][4]-'A');
                 Serial.println(": Tx failed");
                 r.id = float(slaveAddress[n][4]-'A');
-                r.measurement = float(-10);
+                r.measurement = float(-1);
             }
             
             // send I2C //
