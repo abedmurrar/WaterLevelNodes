@@ -85,7 +85,7 @@ int getUltrasonic() {
     delayMicroseconds(10);
     digitalWrite(trigPin, LOW);
     duration = pulseIn(echoPin, HIGH);
-    distance = duration*0.034/2;
+    distance = duration*0.34/2;
     digitalWrite(ultrasonicVcc,0);
     return distance;
 }

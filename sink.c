@@ -62,10 +62,10 @@ void loop() {
                     
                     // Create I2C structure //
                     r.id = float(ackData[0]);
-                    if (ackData[1] > 500) {
+                    if (ackData[1]/10.0 > 500) {
                         r.measurement = float(500);
                     } else {
-                        r.measurement = float(ackData[1]);
+                        r.measurement = float(ackData[1]/10.0);
                     }
                     
                     // Display on Serial Monitor for debugging //
