@@ -6,13 +6,13 @@
 #include <avr/sleep.h>
 #include <avr/power.h>
 
-#define NODEID 2
+#define NODEID 1
 
-const int trigPin = 3;
-const int echoPin = 5;
-const int ultrasonicVcc = 6;
-long duration;
-int distance;
+const int trigPin = 5;
+const int echoPin = 6;
+const int ultrasonicVcc = 7;
+float duration;
+float distance;
 int WakeUpFlag;
 
 const byte thisSlaveAddress[5] = {'R','x','A','A','A'+NODEID};
@@ -54,7 +54,7 @@ void loop() {
             radio.read( &dataReceived, sizeof(dataReceived) );
             if (dataReceived[0] == 1) {
                 ackData[0] = NODEID;
-                ackData[1] = getUltrasonic();
+                ackData[1] = getUltrasonic(15);
                 Serial.println(ackData[1]);
                 radio.writeAckPayload(1, &ackData, sizeof(ackData));
             }
@@ -76,18 +76,24 @@ void loop() {
 
 
 
-int getUltrasonic() {
+int getUltrasonic(int N) {
     digitalWrite(ultrasonicVcc,1);
     delay(500);
-    digitalWrite(trigPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
-    duration = pulseIn(echoPin, HIGH);
-    distance = duration*0.34/2;
+    int i;
+    int avg=0;
+    for (i=0;i<N;i++) {
+        digitalWrite(trigPin, LOW);
+        delayMicroseconds(2);
+        digitalWrite(trigPin, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(trigPin, LOW);
+        duration = pulseIn(echoPin, HIGH);
+        distance = duration*0.34/2;
+        avg += distance;
+    }
+    avg = avg / N;
     digitalWrite(ultrasonicVcc,0);
-    return distance;
+    return avg;
 }
 
 
