@@ -1,4 +1,8 @@
 # WaterLevelNodes
-Resources Used:
-http://www.home-automation-community.com/arduino-low-power-how-to-run-atmega328p-for-a-year-on-coin-cell-battery/
-http://forum.arduino.cc/index.php?topic=421081
+University Project
+
+Code snippets are used from:
+
+[http://forum.arduino.cc/index.php?topic=421081](http://forum.arduino.cc/index.php?topic=421081)
+
+[http://www.gammon.com.au/power](http://www.gammon.com.au/power)

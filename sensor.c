@@ -6,31 +6,33 @@
 #include <avr/sleep.h>
 #include <avr/power.h>
 
-#define NODEID 1
+#define NODEID 2
 
 const int trigPin = 5;
 const int echoPin = 6;
-const int ultrasonicVcc = 7;
+const int ultrasonicGND = 7;
 float duration;
 float distance;
 int WakeUpFlag;
 
 const byte thisSlaveAddress[5] = {'R','x','A','A','A'+NODEID};
 
-RF24 radio(9, 10);
+RF24 radio(3, 4);
 
 int dataReceived[1];
-int ackData[2] = {NODEID, 0};
+unsigned long ackData[2] = {NODEID, 0};
 
 void setup() {
     pinMode(trigPin,OUTPUT);
-    pinMode(echoPin,INPUT);
-    pinMode(ultrasonicVcc,OUTPUT);
-    digitalWrite(ultrasonicVcc,0);
+    pinMode(echoPin,OUTPUT);
+    pinMode(ultrasonicGND,OUTPUT);
+    digitalWrite(ultrasonicGND,1);
+    digitalWrite(trigPin,1);
+    digitalWrite(echoPin,1);
     
     power_adc_disable();
     
-    Serial.begin(9600);
+    //Serial.begin(9600);
     
     radio.begin();
     radio.setDataRate( RF24_250KBPS );
@@ -55,7 +57,7 @@ void loop() {
             if (dataReceived[0] == 1) {
                 ackData[0] = NODEID;
                 ackData[1] = getUltrasonic(15);
-                Serial.println(ackData[1]);
+                //Serial.println(ackData[1]);
                 radio.writeAckPayload(1, &ackData, sizeof(ackData));
             }
         }
@@ -77,8 +79,13 @@ void loop() {
 
 
 int getUltrasonic(int N) {
-    digitalWrite(ultrasonicVcc,1);
-    delay(500);
+    pinMode(trigPin,OUTPUT);
+    pinMode(echoPin,INPUT);
+    pinMode(ultrasonicGND,OUTPUT);
+    digitalWrite(ultrasonicGND,0);
+    digitalWrite(trigPin,0);
+    
+    delay(450);
     int i;
     int avg=0;
     for (i=0;i<N;i++) {
@@ -87,12 +94,22 @@ int getUltrasonic(int N) {
         digitalWrite(trigPin, HIGH);
         delayMicroseconds(10);
         digitalWrite(trigPin, LOW);
-        duration = pulseIn(echoPin, HIGH);
+        duration = pulseIn(echoPin, HIGH, 30000);
+        if (duration == 0) duration = 30000;
         distance = duration*0.34/2;
         avg += distance;
+        delay(25);
     }
     avg = avg / N;
-    digitalWrite(ultrasonicVcc,0);
+    
+    pinMode(trigPin,OUTPUT);
+    pinMode(echoPin,OUTPUT);
+    pinMode(ultrasonicGND,OUTPUT);
+    digitalWrite(ultrasonicGND,1);
+    digitalWrite(trigPin,1);
+    digitalWrite(echoPin,1);
+    
+    
     return avg;
 }
 

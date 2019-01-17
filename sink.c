@@ -8,22 +8,25 @@
 const byte numSlaves = 3;
 const byte slaveAddress[numSlaves][5] = {
     {'R','x','A','A','A'+1},
-    {'R','x','A','A','A'+3},
-    {'R','x','A','A','A'+8}
+    {'R','x','A','A','A'+2},
+    {'R','x','A','A','A'+3}
 };
 RF24 radio(9, 10);
 
-
-int PiCommand,WellToRead;
+int PiCommand,WellToRead,i;
 
 int dataToSend[1];
-int ackData[2] = {-1, -1};
+unsigned long ackData[2] = {-1, -1};
 
 
 // struct for I2C communication
 struct Reading{
+    float id;
     float measurement;
 };
+
+Reading r;
+
 
 void setup() {
     Wire.begin(0x10);
@@ -38,7 +41,7 @@ void setup() {
     radio.enableAckPayload();
     
     radio.setPALevel(RF24_PA_LOW);          // Affects Range
-    radio.setRetries(3,5);
+    radio.setRetries(5,15);
 }
 
 
@@ -51,39 +54,45 @@ void loop() {
 
 
 void getReading() {
-    radio.openWritingPipe(slaveAddress[WellToRead]);
-    bool rslt;
-    dataToSend[0] = 1;
-    rslt = radio.write( &dataToSend, sizeof(dataToSend) );
-    Reading r;
-    
-    if (rslt) {
-        if ( radio.isAckPayloadAvailable() ) {
-            radio.read(&ackData, sizeof(ackData));
-            
-            // Create I2C structure //
-            if (ackData[1]/10.0 > 500) {
-                r.measurement = float(500);
-            } else {
-                r.measurement = float(ackData[1]/10.0);
+    for (byte n = 0; n < numSlaves; n++){
+        i++;
+        radio.openWritingPipe(slaveAddress[n]);
+        bool rslt;
+        dataToSend[0] = 1;
+        rslt = radio.write( &dataToSend, sizeof(dataToSend) );
+        
+        if (rslt) {
+            if ( radio.isAckPayloadAvailable() ) {
+                
+                radio.read(&ackData, sizeof(ackData));
+                
+                // Create I2C structure //
+                r.id = float(ackData[0]);
+                if (ackData[1]/10.0 > 500) {
+                    r.measurement = float(500);
+                } else {
+                    r.measurement = float(ackData[1]/10.0);
+                }
+                
+                // Display on Serial Monitor for debugging //
+                Serial.print(r.id);
+                Serial.print(": ");
+                Serial.println(r.measurement);
+                
             }
-            
-            // Display on Serial Monitor for debugging //
-            Serial.print(WellToRead);
-            Serial.print(" ");
-            Serial.println(r.measurement);
-            
+            else {
+                Serial.print(slaveAddress[n][4]-'A');
+                Serial.println(": Acknowledge but no data ");
+                r.id = float(slaveAddress[n][4]-'A');
+                r.measurement = float(0);
+            }
         }
         else {
             Serial.print(slaveAddress[n][4]-'A');
-            Serial.println(": Acknowledge but no data ");
-            r.measurement = float(0);
+            Serial.println(": Tx failed");
+            r.id = float(slaveAddress[n][4]-'A');
+            r.measurement = float(-1);
         }
-    }
-    else {
-        Serial.print(slaveAddress[n][4]-'A');
-        Serial.println(": Tx failed");
-        r.measurement = float(-1);
     }
 }
 
